@@ -8,7 +8,7 @@ jobs:
     steps:
       - name: Build with the XWiki Docker image
         run: |
-          docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock --entrypoint "/bin/bash" xwiki/build -c " \
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock --entrypoint "/bin/bash" xwiki/build -c " \
             git clone https://github.com/xwiki/xwiki-platform.git && \
             cd xwiki-platform && \
             export MAVEN_OPTS='-Xmx2048m -Xms512m' && \
