@@ -5,88 +5,14 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        java: [ '1.8', '11' ]
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@master
-      - name: Setup Java ${{ matrix.java }}
-        uses: actions/setup-java@v1
-        with:
-          java-version: ${{ matrix.java }}
-      - name: Cache local Maven repository for faster builds
-      - uses: actions/cache@v1
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
-      - name: Build with Maven
+      - name: Build with the XWiki Docker image
         run: |
-          ## Setup Settings.xml. FTM can't use https://github.com/whelk-io/maven-settings-xml-action
-          ## which is missing some features
-          echo "
-<settings>
-  <profiles>
-    <profile>
-      <id>xwiki</id>
-      <repositories>
-        <repository>
-          <id>xwiki-snapshots</id>
-          <name>XWiki Nexus Snapshot Repository Proxy</name>
-          <url>http://nexus.xwiki.org/nexus/content/groups/public-snapshots</url>
-          <releases>
-            <enabled>false</enabled>
-          </releases>
-          <snapshots>
-            <enabled>true</enabled>
-          </snapshots>
-        </repository>
-        <repository>
-          <id>xwiki-releases</id>
-          <name>XWiki Nexus Releases Repository Proxy</name>
-          <url>http://nexus.xwiki.org/nexus/content/groups/public</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-        </repository>
-      </repositories>
-      <pluginRepositories>
-        <pluginRepository>
-          <id>xwiki-snapshots</id>
-          <name>XWiki Nexus Plugin Snapshot Repository Proxy</name>
-          <url>http://nexus.xwiki.org/nexus/content/groups/public-snapshots</url>
-          <releases>
-            <enabled>false</enabled>
-          </releases>
-          <snapshots>
-            <enabled>true</enabled>
-          </snapshots>
-        </pluginRepository>
-        <pluginRepository>
-          <id>xwiki-releases</id>
-          <name>XWiki Nexus Plugin Releases Repository Proxy</name>
-          <url>http://nexus.xwiki.org/nexus/content/groups/public</url>
-          <releases>
-            <enabled>true</enabled>
-          </releases>
-          <snapshots>
-            <enabled>false</enabled>
-          </snapshots>
-        </pluginRepository>
-      </pluginRepositories>
-    </profile>
-  </profiles>
-  <activeProfiles>
-    <activeProfile>xwiki</activeProfile>
-  </activeProfiles>
-</settings>
-          " > ~/.m2/settings.xml
-          export MAVEN_OPTS="-Xmx2048m -Xms512m"
-          export MAVEN_CLI_OPTS="--no-transfer-progress"
-          mvn clean install $MAVEN_CLI_OPTS -Pintegration-tests,docker
-          rm -rf ~/.m2/repository/org/xwiki
-          rm -rf ~/.m2/repository/com/xpn
+          docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock --entrypoint "/bin/bash" xwiki/build -c " \
+            git clone https://github.com/xwiki/xwiki-platform.git && \
+            cd xwiki-platform && \
+            export MAVEN_OPTS='-Xmx2048m -Xms512m' && \
+            vncserver :1 -geometry 1280x960 -localhost -nolisten tcp && \
+            export DISPLAY=:1 && \
+            /home/hudsonagent/maven/bin/mvn --no-transfer-progress install -Plegacy,integration-tests,docker,snapshot \
+          "
