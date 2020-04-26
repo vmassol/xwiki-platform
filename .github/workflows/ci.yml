@@ -14,5 +14,5 @@ jobs:
             export MAVEN_OPTS='-Xmx2048m -Xms512m' && \
             vncserver :1 -geometry 1280x960 -localhost -nolisten tcp && \
             export DISPLAY=:1 && \
-            /home/hudsonagent/maven/bin/mvn --no-transfer-progress install -Plegacy,integration-tests,docker,snapshot \
+            /home/hudsonagent/maven/bin/mvn --no-transfer-progress install -Dmaven.test.failure.ignore -Plegacy,integration-tests,docker,snapshot \
           "

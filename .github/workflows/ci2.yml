@@ -1,0 +1,20 @@
+name: XWiki Platform CI Build
+
+#on: [push]
+
+jobs:
+  build:
+    container:
+      image: xwiki/build
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+      options: --rm --entrypoint "/bin/bash"
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@master
+      - name: Build with Maven
+        run: |
+          export MAVEN_OPTS="-Xmx2048m -Xms512m"
+          vncserver :1 -geometry 1280x960 -localhost -nolisten tcp
+          export DISPLAY=:1
+          /home/hudsonagent/maven/bin/mvn --no-transfer-progress install -Plegacy,integration-tests,docker,snapshot
