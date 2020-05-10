@@ -34,6 +34,6 @@
   <modules>
     <module>xwiki-platform-eventstream-api</module>
     <module>xwiki-platform-eventstream-default</module>
-    <module>xwiki-platform-eventstream-store</module>
+    <module>xwiki-platform-eventstream-stores</module>
   </modules>
 </project>

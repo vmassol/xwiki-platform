@@ -74,7 +74,7 @@
     </dependency>
     <dependency>
       <groupId>org.xwiki.platform</groupId>
-      <artifactId>xwiki-platform-eventstream-store</artifactId>
+      <artifactId>xwiki-platform-eventstream-store-hibernate</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>
@@ -86,7 +86,7 @@
     </dependency>
     <dependency>
       <groupId>org.xwiki.platform</groupId>
-      <artifactId>xwiki-platform-mail-send-storage</artifactId>
+      <artifactId>xwiki-platform-mail-script</artifactId>
       <version>${project.version}</version>
       <scope>runtime</scope>
     </dependency>

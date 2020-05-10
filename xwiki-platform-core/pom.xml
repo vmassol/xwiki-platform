@@ -171,6 +171,71 @@
                     "oldValue": "\"an optional id of a section to include in the specified document\"",
                     "newValue": "\"an optional id of a section to (include|display) in the specified document, e.g. 'HMyHeading'\"",
                     "justification": "Not a breakage, just improved text description!"
+                  },
+                  {
+                    "regex": true,
+                    "code": ".*",
+                    "new": "method .* org\.xwiki\.user\.UserProperties::.*",
+                    "justification": "Young API, not a breakage"
+                  },
+                  {
+                    "code": "java.method.parameterTypeChanged",
+                    "old": "parameter void com.xpn.xwiki.render.ScriptXWikiServletRequest::<init>(===javax.servlet.http.HttpServletRequest===, org.xwiki.security.authorization.ContextualAuthorizationManager)",
+                    "new": "parameter void com.xpn.xwiki.render.ScriptXWikiServletRequest::<init>(===com.xpn.xwiki.web.XWikiRequest===, org.xwiki.security.authorization.ContextualAuthorizationManager)",
+                    "justification": "Young API and should not have any impact on scripts"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method javax.servlet.ServletRequest javax.servlet.ServletRequestWrapper::getRequest() @ com.xpn.xwiki.render.ScriptXWikiServletRequest",
+                    "justification": "Young API and should not have any impact on scripts"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method boolean javax.servlet.ServletRequestWrapper::isWrapperFor(java.lang.Class<?>) @ com.xpn.xwiki.render.ScriptXWikiServletRequest",
+                    "justification": "Young API and should not have any impact on scripts"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method boolean javax.servlet.ServletRequestWrapper::isWrapperFor(javax.servlet.ServletRequest) @ com.xpn.xwiki.render.ScriptXWikiServletRequest",
+                    "justification": "Young API and should not have any impact on scripts"
+                  },
+                  {
+                    "code": "java.method.removed",
+                    "old": "method void javax.servlet.ServletRequestWrapper::setRequest(javax.servlet.ServletRequest) @ com.xpn.xwiki.render.ScriptXWikiServletRequest",
+                    "justification": "Young API and should not have any impact on scripts"
+                  },
+                  {
+                    "code": "java.class.noLongerInheritsFromClass",
+                    "old": "class com.xpn.xwiki.render.ScriptXWikiServletRequest (archive = MavenArchive[gav=org.xwiki.platform:xwiki-platform-legacy-oldcore:jar:12.3, file=\/root\/.m2\/repository\/org\/xwiki\/platform\/xwiki-platform-legacy-oldcore\/12.3\/xwiki-platform-legacy-oldcore-12.3.jar], in api = true, through use = false)",
+                    "new": "class com.xpn.xwiki.render.ScriptXWikiServletRequest (archive = MavenArchive[gav=org.xwiki.platform:xwiki-platform-legacy-oldcore:jar:12.4-SNAPSHOT, file=\/root\/workspace\/XWiki_xwiki-platform_master\/xwiki-platform-core\/xwiki-platform-legacy\/xwiki-platform-legacy-oldcore\/target\/xwiki-platform-legacy-oldcore-12.4-SNAPSHOT.jar], in api = true, through use = false)",
+                    "justification": "Young API and should not have any impact on scripts"
+                  },
+                  {
+                    "code": "java.class.nonFinalClassInheritsFromNewClass",
+                    "old": "class com.xpn.xwiki.render.ScriptXWikiServletRequest (archive = MavenArchive[gav=org.xwiki.platform:xwiki-platform-legacy-oldcore:jar:12.3, file=\/root\/.m2\/repository\/org\/xwiki\/platform\/xwiki-platform-legacy-oldcore\/12.3\/xwiki-platform-legacy-oldcore-12.3.jar], in api = true, through use = false)",
+                    "new": "class com.xpn.xwiki.render.ScriptXWikiServletRequest (archive = MavenArchive[gav=org.xwiki.platform:xwiki-platform-legacy-oldcore:jar:12.4-SNAPSHOT, file=\/root\/workspace\/XWiki_xwiki-platform_master\/xwiki-platform-core\/xwiki-platform-legacy\/xwiki-platform-legacy-oldcore\/target\/xwiki-platform-legacy-oldcore-12.4-SNAPSHOT.jar], in api = true, through use = false)",
+                    "superClass": "com.xpn.xwiki.web.WrappingXWikiRequest",
+                    "justification": "Young API and should not have any impact on scripts"
+                  },
+                  {
+                    "code": "java.annotation.attributeValueChanged",
+                    "old": "class org.xwiki.mail.script.MailSenderScriptService",
+                    "new": "class org.xwiki.mail.script.MailSenderScriptService",
+                    "annotationType": "javax.inject.Named",
+                    "attribute": "value",
+                    "oldValue": "\"mailsender\"",
+                    "newValue": "\"mail.sender\"",
+                    "justification": "Not a breakage, we have added a legacy component with the old hint."
+                  },
+                  {
+                    "code": "java.annotation.attributeValueChanged",
+                    "old": "class org.xwiki.mail.script.MailStorageScriptService",
+                    "new": "class org.xwiki.mail.script.MailStorageScriptService",
+                    "annotationType": "javax.inject.Named",
+                    "attribute": "value",
+                    "oldValue": "\"mailstorage\"",
+                    "newValue": "\"mail.storage\"",
+                    "justification": "Not a breakage, we have added a legacy component with the old hint."
                   }
                 ]
               }

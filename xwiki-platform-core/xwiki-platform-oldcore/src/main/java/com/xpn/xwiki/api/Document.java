@@ -695,11 +695,15 @@ public class Document extends Api
     }
 
     /**
-     * @return the list of existing translations for this document.
+     * @return the list of locales for which this document has a translation; the original (default) locale is not
+     *         included
+     * @throws XWikiException if retrieving the document translations from the database fails
+     * @since 12.4RC1
      */
-    public List<String> getTranslationList() throws XWikiException
+    @Unstable
+    public List<Locale> getTranslationLocales() throws XWikiException
     {
-        return this.doc.getTranslationList(getXWikiContext());
+        return this.doc.getTranslationLocales(getXWikiContext());
     }
 
     /**
