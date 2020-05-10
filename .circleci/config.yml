@@ -1,0 +1,24 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: xwiki/build:latest
+    environment:
+      MAVEN_OPTS: -Xmx2048m -Xms512m -Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=/root/.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true
+      MAVEN_CLI_OPTS: --batch-mode --errors --fail-at-end --show-version --no-transfer-progress -DinstallAtEnd=true -DdeployAtEnd=true -Dmaven.test.failure.ignore
+      BASH_ENV: ~/.bashrc
+    steps:
+      - run: vncserver :1 -geometry 1280x960 -localhost -nolisten tcp
+      - run: export DISPLAY=:1
+      - checkout
+      - run: mvn $MAVEN_CLI_OPTS install -Plegacy,integration-tests,docker,snapshot
+      - run:
+          name: Save test results
+          command: |
+            mkdir -p ~/test-results/junit/
+            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/test-results/junit/ \;
+          when: always
+      - store_test_results:
+          path: ~/test-results
+      - store_artifacts:
+          path: ~/test-results/junit
