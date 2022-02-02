@@ -25,11 +25,11 @@ import javax.inject.Singleton;
 
 import org.apache.commons.lang3.StringUtils;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.index.TaskManager;
 import org.xwiki.mentions.DisplayStyle;
 import org.xwiki.mentions.MentionsConfiguration;
 import org.xwiki.mentions.MentionsFormatter;
 import org.xwiki.mentions.internal.MentionFormatterProvider;
-import org.xwiki.mentions.internal.MentionsEventExecutor;
 import org.xwiki.script.service.ScriptService;
 
 /**
@@ -50,7 +50,7 @@ public class MentionsScriptService implements ScriptService
     private MentionFormatterProvider mentionFormatterProvider;
 
     @Inject
-    private MentionsEventExecutor eventExecutor;
+    private TaskManager eventExecutor;
 
     /**
      *
@@ -73,13 +73,12 @@ public class MentionsScriptService implements ScriptService
     }
 
     /**
-     * @see MentionsEventExecutor#getQueueSize()
      * @return the current size of the queue of elements (page, comments...) with mentions to analyze
      * @since 12.6
      */
     public long getQueueSize()
     {
-        return this.eventExecutor.getQueueSize();
+        return this.eventExecutor.getQueueSize("mention");
     }
 
     /**

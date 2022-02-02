@@ -26,19 +26,24 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
+import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.bridge.event.DocumentUpdatedEvent;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.mentions.internal.MentionsEventExecutor;
+import org.xwiki.index.TaskManager;
+import org.xwiki.index.internal.TaskData;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.event.Event;
 import org.xwiki.observation.remote.RemoteObservationManagerContext;
+import org.xwiki.user.UserReference;
+import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.doc.XWikiDocument;
 
 import static java.util.Collections.singletonList;
 
 /**
- * Listen to entities update. 
+ * Listen to entities update.
  *
  * @version $Id$
  * @since 12.5RC1
@@ -54,10 +59,16 @@ public class MentionsUpdatedEventListener extends AbstractEventListener
     private Logger logger;
 
     @Inject
-    private MentionsEventExecutor executor;
+    private TaskManager executor;
 
     @Inject
     private RemoteObservationManagerContext remoteObservationManagerContext;
+
+    @Inject
+    private EntityReferenceSerializer<String> entityReferenceSerializer;
+
+    @Inject
+    private UserReferenceSerializer<String> userReferenceSerializer;
 
     /**
      * Default constructor.
@@ -78,6 +89,11 @@ public class MentionsUpdatedEventListener extends AbstractEventListener
             DocumentUpdatedEvent.class.getName(), source, data);
 
         XWikiDocument doc = (XWikiDocument) source;
-        this.executor.execute(doc.getDocumentReference(), doc.getAuthorReference(), doc.getVersion());
+        UserReference author = doc.getAuthors().getOriginalMetadataAuthor();
+        this.executor.addTask(new TaskData().setKind("mention").setVersion(new Version(doc.getVersion()))
+                .setAuthor(this.userReferenceSerializer.serialize(author))
+                .setDocName(this.entityReferenceSerializer.serialize(doc.getDocumentReference()))
+                .setWikiId(doc.getDocumentReference().getWikiReference().getName()),
+            doc.getDocumentReference().getWikiReference().getName());
     }
 }

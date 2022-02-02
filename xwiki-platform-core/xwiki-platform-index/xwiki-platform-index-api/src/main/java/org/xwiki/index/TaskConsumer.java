@@ -17,38 +17,30 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.xwiki.mentions.internal;
+package org.xwiki.index;
 
+import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.component.annotation.Role;
-import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.stability.Unstable;
 
 /**
- * Execution the notifications for the mentions asynchronously.
+ * Provide the operation to consume a task.
  *
  * @version $Id$
- * @since 12.6
+ * @since 14.1RC1
  */
 @Role
-public interface MentionsEventExecutor
+@Unstable
+public interface TaskConsumer
 {
     /**
-     * Looks for mentions in the content and creates notifications accordingly.
+     * Consume a task.
      *
-     * @param documentReference the document reference
-     * @param authorReference the author reference
-     * @param version the document version
-     *
+     * @param wikiId the identifier of the wiki where the task is to be executed
+     * @param docName the reference of the document to analyze
+     * @param version the version of the document to analyze
+     * @param author the reference of the user to use to perform the analyzis
+     * @throws IndexException in case of error during the execution of the task
      */
-    void execute(DocumentReference documentReference, DocumentReference authorReference, String version);
-
-    /**
-     *
-     * @return the current size of the queue of mentions to analyze.
-     */
-    long getQueueSize();
-
-    /**
-     * Start the threads of the mentions task consumers.
-     */
-    void startThreads();
+    void consume(String wikiId, String docName, Version version, String author) throws IndexException;
 }

@@ -466,4 +466,19 @@
             <generator class="assigned" />
         </id>
     </class>
+
+    <!-- XWikiTask custom mapping-->
+    <class name="com.xpn.xwiki.doc.tasks.XWikiTask" table="xwikitask">
+        <!-- Stores the queued tasks as well as the running tasks. -->
+        <composite-id name="id" class="com.xpn.xwiki.doc.tasks.XWikiTaskId">
+            <key-property name="docName" column="XWT_DOC_NAME" type="string" length="768" />
+            <key-property name="versionMajor" column="XWT_VERSION1" type="integer" />
+            <key-property name="versionMinor" column="XWT_VERSION2" type="integer" />
+            <key-property name="kind" column="XWT_KIND" type="string" length="768" />
+        </composite-id>
+
+        <!-- The timestamp of creation of the task. Used to prioritize tasks. -->
+        <property name="timestamp" type="timestamp" column="XWT_TIMESTAMP" index="TASK_TIMESTAMP" not-null="true" />
+        <property name="author" column="XWT_AUTHOR" type="string" length="768" />
+    </class>
 </hibernate-mapping>

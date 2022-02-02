@@ -20,13 +20,13 @@
 package org.xwiki.mentions.internal;
 
 import org.junit.jupiter.api.Test;
+import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.context.Execution;
 import org.xwiki.mentions.DisplayStyle;
 import org.xwiki.mentions.MentionLocation;
 import org.xwiki.mentions.events.NewMentionsEvent;
 import org.xwiki.mentions.internal.analyzer.CreatedDocumentMentionsAnalyzer;
 import org.xwiki.mentions.internal.analyzer.UpdatedDocumentMentionsAnalyzer;
-import org.xwiki.mentions.internal.async.MentionsData;
 import org.xwiki.mentions.notifications.MentionNotificationParameter;
 import org.xwiki.mentions.notifications.MentionNotificationParameters;
 import org.xwiki.model.reference.DocumentReference;
@@ -95,10 +95,7 @@ class DefaultMentionsDataConsumerTest
         when(this.documentRevisionProvider.getRevision(DOCUMENT_REFERENCE, "1.1"))
             .thenReturn(null);
 
-        this.dataConsumer.consume(new MentionsData()
-            .setAuthorReference(AUTHOR_REFERENCE)
-            .setDocumentReference(DOCUMENT)
-            .setVersion("1.1"));
+        this.dataConsumer.consume("xwiki", DOCUMENT, new Version(1, 1), AUTHOR_REFERENCE);
 
         verifyNoInteractions(this.observationManager);
         verify(this.execution).removeContext();
@@ -117,10 +114,7 @@ class DefaultMentionsDataConsumerTest
         when(this.createdDocumentMentionsAnalyzer.analyze(doc, DOCUMENT_REFERENCE, "1.1", AUTHOR_REFERENCE))
             .thenReturn(emptyList());
 
-        this.dataConsumer.consume(new MentionsData()
-            .setAuthorReference(AUTHOR_REFERENCE)
-            .setDocumentReference(DOCUMENT)
-            .setVersion("1.1"));
+        this.dataConsumer.consume("xwiki", DOCUMENT, new Version(1, 1), AUTHOR_REFERENCE);
 
         verifyNoInteractions(this.updatedDocumentMentionsAnalyzer);
         verify(this.createdDocumentMentionsAnalyzer)
@@ -142,15 +136,13 @@ class DefaultMentionsDataConsumerTest
         MentionNotificationParameters mentionNotificationParameters =
             new MentionNotificationParameters(AUTHOR_REFERENCE, DOCUMENT_REFERENCE, MentionLocation.DOCUMENT,
                 "1.1")
-                .addNewMention("user", new MentionNotificationParameter("xwiki:XWiki.U1", "anchor1", DisplayStyle.FIRST_NAME));
+                .addNewMention("user",
+                    new MentionNotificationParameter("xwiki:XWiki.U1", "anchor1", DisplayStyle.FIRST_NAME));
         when(this.createdDocumentMentionsAnalyzer.analyze(doc, DOCUMENT_REFERENCE, "1.1", AUTHOR_REFERENCE))
             .thenReturn(singletonList(
                 mentionNotificationParameters));
 
-        this.dataConsumer.consume(new MentionsData()
-            .setAuthorReference(AUTHOR_REFERENCE)
-            .setDocumentReference(DOCUMENT)
-            .setVersion("1.1"));
+        this.dataConsumer.consume("xwiki", DOCUMENT, new Version(1, 1), AUTHOR_REFERENCE);
 
         verifyNoInteractions(this.updatedDocumentMentionsAnalyzer);
         verify(this.createdDocumentMentionsAnalyzer)
@@ -177,10 +169,7 @@ class DefaultMentionsDataConsumerTest
         when(this.updatedDocumentMentionsAnalyzer.analyze(oldDoc, newDoc, DOCUMENT_REFERENCE, "1.1", AUTHOR_REFERENCE))
             .thenReturn(emptyList());
 
-        this.dataConsumer.consume(new MentionsData()
-            .setAuthorReference(AUTHOR_REFERENCE)
-            .setDocumentReference(DOCUMENT)
-            .setVersion("1.1"));
+        this.dataConsumer.consume("xwiki", DOCUMENT, new Version(1, 1), AUTHOR_REFERENCE);
 
         verifyNoInteractions(this.createdDocumentMentionsAnalyzer);
         verify(this.updatedDocumentMentionsAnalyzer)
@@ -205,15 +194,13 @@ class DefaultMentionsDataConsumerTest
         MentionNotificationParameters mentionNotificationParameters =
             new MentionNotificationParameters(AUTHOR_REFERENCE, DOCUMENT_REFERENCE, MentionLocation.DOCUMENT,
                 "1.1")
-                .addNewMention("user", new MentionNotificationParameter("xwiki:XWiki.U1", "anchor1", DisplayStyle.FIRST_NAME));
+                .addNewMention("user",
+                    new MentionNotificationParameter("xwiki:XWiki.U1", "anchor1", DisplayStyle.FIRST_NAME));
         when(this.updatedDocumentMentionsAnalyzer.analyze(oldDoc, newDoc, DOCUMENT_REFERENCE, "1.1", AUTHOR_REFERENCE))
             .thenReturn(singletonList(
                 mentionNotificationParameters));
-
-        this.dataConsumer.consume(new MentionsData()
-            .setAuthorReference(AUTHOR_REFERENCE)
-            .setDocumentReference(DOCUMENT)
-            .setVersion("1.1"));
+        
+        this.dataConsumer.consume("xwiki", DOCUMENT, new Version(1, 1), AUTHOR_REFERENCE);
 
         verifyNoInteractions(this.createdDocumentMentionsAnalyzer);
         verify(this.updatedDocumentMentionsAnalyzer)

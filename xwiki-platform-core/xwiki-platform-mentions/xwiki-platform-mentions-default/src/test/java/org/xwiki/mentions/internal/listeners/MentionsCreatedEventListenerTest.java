@@ -22,19 +22,26 @@ package org.xwiki.mentions.internal.listeners;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
+import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.bridge.event.DocumentCreatedEvent;
-import org.xwiki.mentions.internal.MentionsEventExecutor;
+import org.xwiki.index.TaskManager;
+import org.xwiki.index.internal.TaskData;
+import org.xwiki.model.document.DocumentAuthors;
 import org.xwiki.model.reference.DocumentReference;
+import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.test.junit5.LogCaptureExtension;
 import org.xwiki.test.junit5.mockito.ComponentTest;
 import org.xwiki.test.junit5.mockito.InjectMockComponents;
 import org.xwiki.test.junit5.mockito.MockComponent;
+import org.xwiki.user.UserReference;
+import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.doc.XWikiDocument;
 
 import ch.qos.logback.classic.Level;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.xwiki.test.LogLevel.DEBUG;
@@ -58,18 +65,29 @@ class MentionsCreatedEventListenerTest
     private XWikiDocument document;
 
     @MockComponent
-    private MentionsEventExecutor executor;
+    private TaskManager taskManager;
+
+    @MockComponent
+    private EntityReferenceSerializer<String> entityReferenceSerializer;
+
+    @MockComponent
+    private UserReferenceSerializer<String> userReferenceSerializer;
 
     @Test
     void onEvent()
     {
         DocumentReference documentReference = new DocumentReference("xwiki", "XWiki", "Doc");
-        DocumentReference authorReference = new DocumentReference("xwiki", "XWiki", "Author");
         DocumentCreatedEvent event = new DocumentCreatedEvent(documentReference);
+        DocumentAuthors documentAuthors = mock(DocumentAuthors.class);
+        UserReference userReference = mock(UserReference.class);
 
         when(this.document.getDocumentReference()).thenReturn(documentReference);
-        when(this.document.getAuthorReference()).thenReturn(authorReference);
+        when(documentAuthors.getOriginalMetadataAuthor()).thenReturn(userReference);
+        when(this.document.getAuthors()).thenReturn(documentAuthors);
         when(this.document.getVersion()).thenReturn("1.1");
+
+        when(this.userReferenceSerializer.serialize(userReference)).thenReturn("Author");
+        when(this.entityReferenceSerializer.serialize(documentReference)).thenReturn("xwiki:XWiki.Doc");
 
         this.listener.onEvent(event, this.document, null);
 
@@ -78,6 +96,11 @@ class MentionsCreatedEventListenerTest
         assertEquals("Event [org.xwiki.bridge.event.DocumentCreatedEvent] received from [document] with data [null].",
             this.logCapture.getMessage(0));
 
-        verify(this.executor).execute(documentReference, authorReference, "1.1");
+        verify(this.taskManager).addTask(new TaskData()
+            .setDocName("xwiki:XWiki.Doc")
+            .setKind("mention")
+            .setWikiId("xwiki")
+            .setVersion(new Version(1, 1))
+            .setAuthor("Author"), "xwiki");
     }
 }

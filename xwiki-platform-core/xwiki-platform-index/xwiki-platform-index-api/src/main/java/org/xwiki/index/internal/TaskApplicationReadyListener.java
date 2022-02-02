@@ -17,7 +17,7 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.xwiki.mentions.internal.listeners;
+package org.xwiki.index.internal;
 
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -28,43 +28,37 @@ import org.xwiki.bridge.event.ApplicationReadyEvent;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
-import org.xwiki.mentions.internal.MentionsEventExecutor;
+import org.xwiki.index.TaskManager;
 import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.event.Event;
 
 import com.xpn.xwiki.XWikiContext;
 
 /**
- * Listen for the application to be ready before starting the mentions task consumers.
+ * Listen for the application to be ready before starting the task manager.
  *
  * @version $Id$
- * @since 12.6
+ * @since 14.1RC1
  */
 @Component
 @Singleton
-@Named("MentionsApplicationReadyEventListener")
-public class MentionsApplicationReadyEventListener extends AbstractEventListener implements Initializable
+@Named("TaskApplicationReadyListener")
+public class TaskApplicationReadyListener extends AbstractEventListener implements Initializable
 {
-    @Inject
-    private MentionsEventExecutor eventExecutor;
-
     @Inject
     @Named("readonly")
     private Provider<XWikiContext> contextProvider;
 
-    /**
-     * Default constructor.
-     */
-    public MentionsApplicationReadyEventListener()
-    {
-        super("MentionsApplicationReadyEventListener", new ApplicationReadyEvent());
-    }
+    @Inject
+    private TaskManager taskManager;
 
-    @Override
-    public void onEvent(Event event, Object source, Object data)
+    /**
+     * Default constructor, initialize the listener with its name and the listened event ({@link
+     * ApplicationReadyEvent}).
+     */
+    public TaskApplicationReadyListener()
     {
-        // In case of ApplicationReadyEvent (when the wiki starts)
-        this.eventExecutor.startThreads();
+        super("TaskApplicationReadyListener", new ApplicationReadyEvent());
     }
 
     @Override
@@ -73,7 +67,14 @@ public class MentionsApplicationReadyEventListener extends AbstractEventListener
         // If the application is already initialized we start the threads immediately
         // (e.g. in case of extension install).
         if (this.contextProvider.get() != null) {
-            this.eventExecutor.startThreads();
+            this.taskManager.startThread();
         }
+    }
+
+    @Override
+    public void onEvent(Event event, Object source, Object data)
+    {
+        // In case of ApplicationReadyEvent (when the wiki starts)
+        this.taskManager.startThread();
     }
 }
