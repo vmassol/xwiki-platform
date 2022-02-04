@@ -45,7 +45,7 @@ public class TaskData implements Serializable
 
     private int version2;
 
-    private String docName;
+    private long docId;
 
     private String kind;
 
@@ -54,8 +54,6 @@ public class TaskData implements Serializable
     private boolean stopFlag;
 
     private String wikiId;
-
-    private String author;
 
     /**
      * Default empty constructor.
@@ -109,20 +107,20 @@ public class TaskData implements Serializable
     }
 
     /**
-     * @return the reference of the document to analyze (e.g., Space.Page)
+     * @return the id of the document to analyze
      */
-    public String getDocName()
+    public long getDocId()
     {
-        return this.docName;
+        return this.docId;
     }
 
     /**
-     * @param docName the reference of the document to analyze (e.g., Space.Page)
+     * @param docId the id of the document to analyze
      * @return the current task
      */
-    public TaskData setDocName(String docName)
+    public TaskData setDocId(long docId)
     {
-        this.docName = docName;
+        this.docId = docId;
         return this;
     }
 
@@ -188,24 +186,6 @@ public class TaskData implements Serializable
     }
 
     /**
-     * @return the reference of the user to use to perform the task
-     */
-    public String getAuthor()
-    {
-        return this.author;
-    }
-
-    /**
-     * @param author the reference of the user to use to perform the task
-     * @return the current task
-     */
-    public TaskData setAuthor(String author)
-    {
-        this.author = author;
-        return this;
-    }
-
-    /**
      * @return {@code true} when to many failed attempts have been made, {@code false} otherwise
      */
     public boolean tooManyAttempts()
@@ -232,10 +212,9 @@ public class TaskData implements Serializable
             .append(this.version2, taskData.version2)
             .append(this.attempts, taskData.attempts)
             .append(this.stopFlag, taskData.stopFlag)
-            .append(this.docName, taskData.docName)
+            .append(this.docId, taskData.docId)
             .append(this.kind, taskData.kind)
             .append(this.wikiId, taskData.wikiId)
-            .append(this.author, taskData.author)
             .isEquals();
     }
 
@@ -246,12 +225,11 @@ public class TaskData implements Serializable
             .append(this.timestamp)
             .append(this.version1)
             .append(this.version2)
-            .append(this.docName)
+            .append(this.docId)
             .append(this.kind)
             .append(this.attempts)
             .append(this.stopFlag)
             .append(this.wikiId)
-            .append(this.author)
             .toHashCode();
     }
 
@@ -260,13 +238,12 @@ public class TaskData implements Serializable
     {
         return new ToStringBuilder(this)
             .append("timestamp", this.timestamp)
-            .append("docName", this.docName)
+            .append("docId", this.docId)
             .append("kind", this.kind)
             .append("attempts", this.attempts)
             .append("stop", this.stopFlag)
             .append("wikiId", this.wikiId)
             .append("version", getVersion())
-            .append("author", getAuthor())
             .toString();
     }
 }

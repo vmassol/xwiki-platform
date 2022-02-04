@@ -27,7 +27,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.context.Execution;
 import org.xwiki.index.IndexException;
@@ -38,8 +37,8 @@ import org.xwiki.mentions.internal.analyzer.UpdatedDocumentMentionsAnalyzer;
 import org.xwiki.mentions.notifications.MentionNotificationParameter;
 import org.xwiki.mentions.notifications.MentionNotificationParameters;
 import org.xwiki.model.reference.DocumentReference;
-import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.observation.ObservationManager;
+import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.XWikiException;
 import com.xpn.xwiki.doc.DocumentRevisionProvider;
@@ -64,9 +63,6 @@ import com.xpn.xwiki.objects.LargeStringProperty;
 public class DefaultMentionsDataConsumer implements TaskConsumer
 {
     @Inject
-    private DocumentReferenceResolver<String> documentReferenceResolver;
-
-    @Inject
     private Execution execution;
 
     @Inject
@@ -81,26 +77,28 @@ public class DefaultMentionsDataConsumer implements TaskConsumer
     @Inject
     private UpdatedDocumentMentionsAnalyzer updatedDocumentMentionsAnalyzer;
 
+    @Inject
+    private UserReferenceSerializer<String> userReferenceSerializer;
+
     @Override
-    public void consume(String wikiId, String docName, Version version, String authorReference) throws IndexException
+    public void consume(DocumentReference documentReference, String version) throws IndexException
     {
         try {
-            DocumentReference dr = this.documentReferenceResolver.resolve(docName);
-            XWikiDocument doc = this.documentRevisionProvider.getRevision(dr, version.toString());
+            XWikiDocument doc = this.documentRevisionProvider.getRevision(documentReference, version);
             if (doc != null) {
-                // Stores the list of mentions found in the document and its attached objects.
+                String authorReference =
+                    this.userReferenceSerializer.serialize(doc.getAuthors().getEffectiveMetadataAuthor());
                 List<MentionNotificationParameters> mentionNotificationParameters;
-                DocumentReference documentReference = doc.getDocumentReference();
-
                 if (doc.getPreviousVersion() == null) {
                     // CREATE
                     mentionNotificationParameters = this.createdDocumentMentionsAnalyzer
-                        .analyze(doc, documentReference, version.toString(), authorReference);
+                        .analyze(doc, documentReference, doc.getVersion(), authorReference);
                 } else {
                     // UPDATE
-                    XWikiDocument oldDoc = this.documentRevisionProvider.getRevision(dr, doc.getPreviousVersion());
+                    XWikiDocument oldDoc =
+                        this.documentRevisionProvider.getRevision(doc.getDocumentReference(), doc.getPreviousVersion());
                     mentionNotificationParameters = this.updatedDocumentMentionsAnalyzer
-                        .analyze(oldDoc, doc, documentReference, version.toString(), authorReference);
+                        .analyze(oldDoc, doc, documentReference, doc.getVersion(), authorReference);
                 }
                 sendNotification(mentionNotificationParameters);
             }

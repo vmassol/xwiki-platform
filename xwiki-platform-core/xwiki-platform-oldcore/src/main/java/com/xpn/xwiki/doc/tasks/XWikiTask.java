@@ -36,8 +36,6 @@ public class XWikiTask implements Serializable
 
     private Date timestamp;
 
-    private String author;
-
     /**
      * @return the compound id of the task
      */
@@ -70,29 +68,12 @@ public class XWikiTask implements Serializable
         this.timestamp = timestamp;
     }
 
-    /**
-     * @return the user to use for the task processing
-     */
-    public String getAuthor()
-    {
-        return this.author;
-    }
-
-    /**
-     * @param author the user to use for the task processing
-     */
-    public void setAuthor(String author)
-    {
-        this.author = author;
-    }
-
     @Override
     public String toString()
     {
         return new ToStringBuilder(this)
             .append("id", this.id)
             .append("timestamp", this.timestamp)
-            .append("author", this.author)
             .toString();
     }
 }

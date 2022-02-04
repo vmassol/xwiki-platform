@@ -27,14 +27,15 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.hibernate.Session;
+import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.context.ExecutionContext;
 import org.xwiki.context.ExecutionContextManager;
 import org.xwiki.model.reference.DocumentReferenceResolver;
-import org.xwiki.model.reference.WikiReference;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
+import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.doc.tasks.XWikiTask;
 import com.xpn.xwiki.doc.tasks.XWikiTaskId;
 import com.xpn.xwiki.store.XWikiHibernateBaseStore;
@@ -72,7 +73,7 @@ public class TasksStore extends XWikiHibernateBaseStore
         return initWikiContext(xWikiContext -> executeRead(xWikiContext,
             session -> session.createQuery("SELECT t FROM XWikiTask t WHERE t.id.instanceId = :instanceId")
                 .setParameter("instanceId", instanceId)
-                .getResultList()), null, wikiId);
+                .getResultList()), wikiId);
     }
 
     /**
@@ -90,34 +91,36 @@ public class TasksStore extends XWikiHibernateBaseStore
                 return null;
             });
             return null;
-        }, task.getAuthor(), wikiId);
+        }, wikiId);
     }
 
     /**
      * Remove a task from the queue.
      *
      * @param wikiId the wiki in which to execute the query
-     * @param task the task to remove
+     * @param docId the docId to remove
+     * @param version the version to remove
+     * @param kind the kind of the task to remove
      * @throws XWikiException in case of error when removing the task
      */
-    public void deleteTask(String wikiId, XWikiTask task) throws XWikiException
+    public void deleteTask(String wikiId, long docId, Version version, String kind) throws XWikiException
     {
         initWikiContext(xWikiContext -> {
             executeWrite(xWikiContext, session -> {
-                XWikiTaskId taskId = task.getId();
-                session.createQuery("delete from XWikiTask t where t.id.docName = :docName "
+
+                session.createQuery("delete from XWikiTask t where t.id.docId = :docId "
                         + "and t.id.versionMajor = :versionMajor "
                         + "and t.id.versionMinor = :versionMinor "
                         + "and t.id.kind = :kind")
-                    .setParameter("docName", taskId.getDocName())
-                    .setParameter("versionMajor", taskId.getVersionMajor())
-                    .setParameter("versionMinor", taskId.getVersionMinor())
-                    .setParameter("kind", taskId.getKind())
+                    .setParameter("docId", docId)
+                    .setParameter("versionMajor", version.at(0))
+                    .setParameter("versionMinor", version.at(1))
+                    .setParameter("kind", kind)
                     .executeUpdate();
                 return null;
             });
             return null;
-        }, task.getAuthor(), wikiId);
+        }, wikiId);
     }
 
     /**
@@ -132,29 +135,41 @@ public class TasksStore extends XWikiHibernateBaseStore
         initWikiContext(xWikiContext -> {
             executeWrite(xWikiContext, session -> {
                 XWikiTaskId taskId = task.getId();
-                session.createQuery("delete from XWikiTask t where t.id.docName = :docName "
+                session.createQuery("delete from XWikiTask t where t.id.docId = :docId "
                         + "and t.id.kind = :kind")
-                    .setParameter("docName", taskId.getDocName())
+                    .setParameter("docId", taskId.getDocId())
                     .setParameter("kind", taskId.getKind())
                     .executeUpdate();
                 innerAddTask(task, session);
                 return null;
             });
             return null;
-        }, task.getAuthor(), wikiId);
+        }, wikiId);
     }
 
-    private <T> T initWikiContext(Lambda<T> r, String author, String wikiId) throws XWikiException
+    /**
+     * Return  an {@link XWikiDocument} by its id.
+     *
+     * @param wikiId the wiki in which to execute the query
+     * @param docId the id of the document to retrive
+     * @return the document
+     * @throws XWikiException in case of error when executing the query
+     */
+    public XWikiDocument getDocument(String wikiId, long docId) throws XWikiException
+    {
+        return initWikiContext(context -> executeRead(context, session -> (XWikiDocument)
+            session.createQuery("select doc from XWikiDocument doc where doc.id = :docId")
+                .setParameter("docId", docId)
+                .getSingleResult()
+        ), wikiId);
+    }
+
+    private <T> T initWikiContext(Lambda<T> r, String wikiId) throws XWikiException
     {
         try {
-            ExecutionContext context = new ExecutionContext();
-            this.contextManager.initialize(context);
+            this.contextManager.initialize(new ExecutionContext());
 
             XWikiContext xWikiContext = this.xcontextProvider.get();
-            if (author != null) {
-                xWikiContext.setUserReference(this.documentReferenceResolver.resolve(author));
-            }
-            xWikiContext.setWikiReference(new WikiReference(wikiId));
             xWikiContext.setWikiId(wikiId);
             return r.call(xWikiContext);
         } catch (Exception e) {

@@ -30,6 +30,7 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
+import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.manager.ComponentLifecycleException;
 import org.xwiki.component.manager.ComponentManager;
@@ -40,11 +41,15 @@ import org.xwiki.index.TaskConsumer;
 import org.xwiki.index.TaskManager;
 import org.xwiki.index.internal.jmx.JMXTasks;
 import org.xwiki.management.JMXBeanRegistration;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.observation.remote.RemoteObservationManagerConfiguration;
 import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 import org.xwiki.wiki.manager.WikiManagerException;
 
+import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
+import com.xpn.xwiki.doc.DocumentRevisionProvider;
+import com.xpn.xwiki.doc.XWikiDocument;
 import com.xpn.xwiki.doc.tasks.XWikiTask;
 import com.xpn.xwiki.doc.tasks.XWikiTaskId;
 
@@ -83,39 +88,49 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     @Inject
     private Logger logger;
 
-    private Thread thread;
+    @Inject
+    private Provider<XWikiContext> contextProvider;
+
+    @Inject
+    private DocumentRevisionProvider documentRevisionProvider;
 
     @Override
-    public void addTask(TaskData taskData, String wikiId)
+    public void addTask(DocumentReference documentReference, long docId, String versionStr, String kind)
     {
+        Version version = new Version(versionStr);
+        XWikiTask xWikiTask = initTask(docId, kind, version);
+        String wikiId = documentReference.getWikiReference().getName();
         try {
-            taskData.setTimestamp(new Date().getTime());
-            this.tasksStore.get().addTask(wikiId, convert(taskData));
+            this.tasksStore.get().addTask(wikiId, xWikiTask);
         } catch (XWikiException e) {
-            this.logger.warn("Failed to add task [{}] in wiki [{}]. This task is queued but will not be will not be"
-                    + " restarted if not completed before the server stops. Cause: [{}].", taskData, wikiId,
-                getRootCauseMessage(e));
+            this.logger.warn(
+                "Failed to add a task for docId [{}], kind [{}] and version [{}] in wiki [{}]. This task is queued but "
+                    + "will not be will not be restarted if not completed before the server stops. Cause: [{}].", docId,
+                kind, version, wikiId, getRootCauseMessage(e));
         }
 
-        this.queue.add(taskData);
+        this.queue.add(convert(wikiId, xWikiTask));
     }
 
     @Override
-    public void replaceTask(TaskData taskData, String wikiId)
+    public void replaceTask(DocumentReference documentReference, long docId, String versionStr, String kind)
     {
+        String wikiId = documentReference.getWikiReference().getName();
+
+        Version version = new Version(versionStr);
+        XWikiTask xWikiTask = initTask(docId, kind, version);
         try {
-            taskData.setTimestamp(new Date().getTime());
-            this.tasksStore.get().replaceTask(wikiId, convert(taskData));
+            this.tasksStore.get().replaceTask(wikiId, xWikiTask);
         } catch (XWikiException e) {
-            this.logger.warn("Failed to persist task [{}] in wiki [{}]. The tasks are replaced but will not be "
-                    + "restarted if not completed before the server stops. Cause: [{}].", taskData, wikiId,
-                getRootCauseMessage(e));
+            this.logger.warn("Failed to persist task with docId [{}], kind [{}] and version [{}] in wiki [{}]. The "
+                + "tasks are replaced but will not be restarted if not completed before the server "
+                + "stops. Cause: [{}].", docId, kind, version, wikiId, getRootCauseMessage(e));
         }
 
         this.queue.removeIf(queuedTask -> Objects.equals(queuedTask.getWikiId(), wikiId)
-            && Objects.equals(queuedTask.getKind(), taskData.getKind())
-            && Objects.equals(queuedTask.getDocName(), taskData.getDocName()));
-        this.queue.add(taskData);
+            && Objects.equals(queuedTask.getKind(), kind)
+            && Objects.equals(queuedTask.getDocId(), docId));
+        this.queue.add(convert(wikiId, xWikiTask));
     }
 
     @Override
@@ -137,7 +152,7 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     @Override
     public void startThread()
     {
-        this.thread = new Thread(new TasksRunnable());
+        Thread thread = new Thread(new TasksRunnable());
         thread.setName("task-manager-consumer");
         thread.setPriority(NORM_PRIORITY - 1);
         thread.start();
@@ -194,11 +209,23 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
                 if (task.isStop()) {
                     this.halt = true;
                 } else if (!task.isDeprecated()) {
-                    DefaultTasksManager.this.componentManager.get()
-                        .<TaskConsumer>getInstance(TaskConsumer.class, task.getKind())
-                        .consume(task.getWikiId(), task.getDocName(), task.getVersion(),
-                            task.getAuthor());
-                    DefaultTasksManager.this.tasksStore.get().deleteTask(task.getWikiId(), convert(task));
+                    XWikiContext context = DefaultTasksManager.this.contextProvider.get();
+                    String oldWikId = context.getWikiId();
+                    try {
+                        context.setWikiId(task.getWikiId());
+                        XWikiDocument document =
+                            DefaultTasksManager.this.tasksStore.get().getDocument(task.getWikiId(), task.getDocId());
+                        XWikiDocument doc =
+                            DefaultTasksManager.this.documentRevisionProvider.getRevision(document,
+                                task.getVersion().toString());
+                        DefaultTasksManager.this.componentManager.get()
+                            .<TaskConsumer>getInstance(TaskConsumer.class, task.getKind())
+                            .consume(doc.getDocumentReference(), doc.getVersion());
+                        DefaultTasksManager.this.tasksStore.get()
+                            .deleteTask(task.getWikiId(), task.getDocId(), task.getVersion(), task.getKind());
+                    } finally {
+                        context.setWikiId(oldWikId);
+                    }
                 }
             } catch (Exception e) {
                 DefaultTasksManager.this.logger.warn("Error during the execution of task [{}]. Cause: [{}].", task,
@@ -209,7 +236,8 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
                         task.setTimestamp(System.currentTimeMillis());
                         DefaultTasksManager.this.queue.put(task);
                     } else {
-                        logger.error("[{}] abandoned because it has failed to many times.", task);
+                        DefaultTasksManager.this.logger.error("[{}] abandoned because it has failed to many times.",
+                            task);
                     }
                 }
             }
@@ -233,24 +261,22 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
         TaskData taskData = new TaskData();
         taskData.setTimestamp(task.getTimestamp().getTime());
         taskData.setVersion(task.getId().getVersion());
-        taskData.setDocName(task.getId().getDocName());
+        taskData.setDocId(task.getId().getDocId());
         taskData.setKind(task.getId().getKind());
         taskData.setWikiId(wikiId);
-        taskData.setAuthor(task.getAuthor());
         return taskData;
     }
 
-    private XWikiTask convert(TaskData taskData)
+    private XWikiTask initTask(long docId, String kind, Version version)
     {
         XWikiTask xWikiTask = new XWikiTask();
         XWikiTaskId id = new XWikiTaskId();
-        id.setDocName(taskData.getDocName());
-        id.setKind(taskData.getKind());
-        id.setVersion(taskData.getVersion());
+        id.setDocId(docId);
+        id.setKind(kind);
+        id.setVersion(version);
         id.setInstanceId(this.remoteObservationManagerConfiguration.getId());
         xWikiTask.setId(id);
-        xWikiTask.setAuthor(taskData.getAuthor());
-        xWikiTask.setTimestamp(new Date(taskData.getTimestamp()));
+        xWikiTask.setTimestamp(new Date());
         return xWikiTask;
     }
 }

@@ -26,17 +26,12 @@ import javax.inject.Named;
 import javax.inject.Singleton;
 
 import org.slf4j.Logger;
-import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.bridge.event.DocumentCreatedEvent;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.index.TaskManager;
-import org.xwiki.index.internal.TaskData;
-import org.xwiki.model.reference.EntityReferenceSerializer;
 import org.xwiki.observation.AbstractEventListener;
 import org.xwiki.observation.event.Event;
 import org.xwiki.observation.remote.RemoteObservationManagerContext;
-import org.xwiki.user.UserReference;
-import org.xwiki.user.UserReferenceSerializer;
 
 import com.xpn.xwiki.doc.XWikiDocument;
 
@@ -59,16 +54,10 @@ public class MentionsCreatedEventListener extends AbstractEventListener
     private Logger logger;
 
     @Inject
-    private TaskManager executor;
+    private TaskManager taskManager;
 
     @Inject
     private RemoteObservationManagerContext remoteObservationManagerContext;
-
-    @Inject
-    private EntityReferenceSerializer<String> entityReferenceSerializer;
-
-    @Inject
-    private UserReferenceSerializer<String> userReferenceSerializer;
 
     /**
      * Default constructor.
@@ -86,15 +75,8 @@ public class MentionsCreatedEventListener extends AbstractEventListener
         }
         this.logger.debug("Event [{}] received from [{}] with data [{}].", DocumentCreatedEvent.class.getName(), source,
             data);
-        XWikiDocument doc = (XWikiDocument) source;
 
-        UserReference author = doc.getAuthors().getOriginalMetadataAuthor();
-        TaskData taskData = new TaskData()
-            .setKind("mention")
-            .setVersion(new Version(doc.getVersion()))
-            .setAuthor(this.userReferenceSerializer.serialize(author))
-            .setDocName(this.entityReferenceSerializer.serialize(doc.getDocumentReference()))
-            .setWikiId(doc.getDocumentReference().getWikiReference().getName());
-        this.executor.addTask(taskData, doc.getDocumentReference().getWikiReference().getName());
+        XWikiDocument doc = (XWikiDocument) source;
+        this.taskManager.addTask(doc.getDocumentReference(), doc.getId(), doc.getVersion(), "mention");
     }
 }

@@ -19,8 +19,8 @@
  */
 package org.xwiki.index;
 
-import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.component.annotation.Role;
+import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.stability.Unstable;
 
 /**
@@ -36,11 +36,9 @@ public interface TaskConsumer
     /**
      * Consume a task.
      *
-     * @param wikiId the identifier of the wiki where the task is to be executed
-     * @param docName the reference of the document to analyze
+     * @param documentReference of the document to analyze
      * @param version the version of the document to analyze
-     * @param author the reference of the user to use to perform the analyzis
      * @throws IndexException in case of error during the execution of the task
      */
-    void consume(String wikiId, String docName, Version version, String author) throws IndexException;
+    void consume(DocumentReference documentReference, String version) throws IndexException;
 }

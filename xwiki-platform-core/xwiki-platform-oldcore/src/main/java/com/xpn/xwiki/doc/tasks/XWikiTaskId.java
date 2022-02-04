@@ -35,7 +35,7 @@ import org.suigeneris.jrcs.rcs.Version;
  */
 public class XWikiTaskId implements Serializable
 {
-    private String docName;
+    private long docId;
 
     private int versionMinor;
 
@@ -46,19 +46,19 @@ public class XWikiTaskId implements Serializable
     private String instanceId;
 
     /**
-     * @return the document name to be processed
+     * @return the document id
      */
-    public String getDocName()
+    public long getDocId()
     {
-        return this.docName;
+        return this.docId;
     }
 
     /**
-     * @param docName the document nname to be processed (e.g., XWiki.Space.Page)
+     * @param docId the id of the document to be processed 
      */
-    public void setDocName(String docName)
+    public void setDocId(long docId)
     {
-        this.docName = docName;
+        this.docId = docId;
     }
 
     /**
@@ -146,7 +146,7 @@ public class XWikiTaskId implements Serializable
     public String toString()
     {
         return new ToStringBuilder(this)
-            .append("docName", this.docName)
+            .append("docId", this.docId)
             .append("kind", this.kind)
             .append("version", getVersion())
             .append("instanceId", getInstanceId())
@@ -169,7 +169,7 @@ public class XWikiTaskId implements Serializable
         return new EqualsBuilder()
             .append(this.versionMinor, that.versionMinor)
             .append(this.versionMajor, that.versionMajor)
-            .append(this.docName, that.docName)
+            .append(this.docId, that.docId)
             .append(this.kind, that.kind)
             .append(this.instanceId, that.instanceId)
             .isEquals();
@@ -179,7 +179,7 @@ public class XWikiTaskId implements Serializable
     public int hashCode()
     {
         return new HashCodeBuilder(17, 37)
-            .append(this.docName)
+            .append(this.docId)
             .append(this.versionMinor)
             .append(this.versionMajor)
             .append(this.kind)
