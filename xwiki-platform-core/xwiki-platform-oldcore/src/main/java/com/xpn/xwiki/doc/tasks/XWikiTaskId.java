@@ -43,6 +43,8 @@ public class XWikiTaskId implements Serializable
 
     private String kind;
 
+    private String instanceId;
+
     /**
      * @return the document name to be processed
      */
@@ -124,6 +126,22 @@ public class XWikiTaskId implements Serializable
         this.kind = kind;
     }
 
+    /**
+     * @return the identifier of the instance that queued the task
+     */
+    public String getInstanceId()
+    {
+        return this.instanceId;
+    }
+
+    /**
+     * @param instanceId the identifier of the instance that queued the task
+     */
+    public void setInstanceId(String instanceId)
+    {
+        this.instanceId = instanceId;
+    }
+
     @Override
     public String toString()
     {
@@ -131,6 +149,7 @@ public class XWikiTaskId implements Serializable
             .append("docName", this.docName)
             .append("kind", this.kind)
             .append("version", getVersion())
+            .append("instanceId", getInstanceId())
             .toString();
     }
 
@@ -152,6 +171,7 @@ public class XWikiTaskId implements Serializable
             .append(this.versionMajor, that.versionMajor)
             .append(this.docName, that.docName)
             .append(this.kind, that.kind)
+            .append(this.instanceId, that.instanceId)
             .isEquals();
     }
 
@@ -163,6 +183,7 @@ public class XWikiTaskId implements Serializable
             .append(this.versionMinor)
             .append(this.versionMajor)
             .append(this.kind)
+            .append(this.instanceId)
             .toHashCode();
     }
 }

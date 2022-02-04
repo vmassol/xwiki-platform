@@ -20,6 +20,7 @@
 package org.xwiki.index.internal;
 
 import java.util.Comparator;
+import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.stream.Collectors;
@@ -30,11 +31,16 @@ import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.component.manager.ComponentLifecycleException;
 import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.component.phase.Disposable;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
 import org.xwiki.index.TaskConsumer;
 import org.xwiki.index.TaskManager;
+import org.xwiki.index.internal.jmx.JMXTasks;
+import org.xwiki.management.JMXBeanRegistration;
+import org.xwiki.observation.remote.RemoteObservationManagerConfiguration;
 import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 import org.xwiki.wiki.manager.WikiManagerException;
 
@@ -53,8 +59,10 @@ import static org.apache.commons.lang3.exception.ExceptionUtils.getRootCauseMess
  */
 @Component
 @Singleton
-public class DefaultTasksManager implements TaskManager, Initializable
+public class DefaultTasksManager implements TaskManager, Initializable, Disposable
 {
+    private static final String MBEAN_NAME = "name=index";
+
     private PriorityBlockingQueue<TaskData> queue;
 
     @Inject
@@ -67,12 +75,21 @@ public class DefaultTasksManager implements TaskManager, Initializable
     private Provider<ComponentManager> componentManager;
 
     @Inject
+    private RemoteObservationManagerConfiguration remoteObservationManagerConfiguration;
+
+    @Inject
+    private JMXBeanRegistration jmxRegistration;
+
+    @Inject
     private Logger logger;
+
+    private Thread thread;
 
     @Override
     public void addTask(TaskData taskData, String wikiId)
     {
         try {
+            taskData.setTimestamp(new Date().getTime());
             this.tasksStore.get().addTask(wikiId, convert(taskData));
         } catch (XWikiException e) {
             this.logger.warn("Failed to add task [{}] in wiki [{}]. This task is queued but will not be will not be"
@@ -87,6 +104,7 @@ public class DefaultTasksManager implements TaskManager, Initializable
     public void replaceTask(TaskData taskData, String wikiId)
     {
         try {
+            taskData.setTimestamp(new Date().getTime());
             this.tasksStore.get().replaceTask(wikiId, convert(taskData));
         } catch (XWikiException e) {
             this.logger.warn("Failed to persist task [{}] in wiki [{}]. The tasks are replaced but will not be "
@@ -103,14 +121,23 @@ public class DefaultTasksManager implements TaskManager, Initializable
     @Override
     public void initialize() throws InitializationException
     {
-        // TODO: mbean!
+        this.jmxRegistration.registerMBean(new JMXTasks(this::getQueueSize,
+                () -> this.queue.stream().collect(Collectors.groupingBy(TaskData::getKind, Collectors.counting()))),
+            MBEAN_NAME);
         this.queue = new PriorityBlockingQueue<>(11, Comparator.comparingLong(TaskData::getTimestamp));
+    }
+
+    @Override
+    public void dispose() throws ComponentLifecycleException
+    {
+        this.jmxRegistration.unregisterMBean(MBEAN_NAME);
+        this.queue.add(TaskData.STOP);
     }
 
     @Override
     public void startThread()
     {
-        Thread thread = new Thread(new TasksRunnable());
+        this.thread = new Thread(new TasksRunnable());
         thread.setName("task-manager-consumer");
         thread.setPriority(NORM_PRIORITY - 1);
         thread.start();
@@ -131,10 +158,11 @@ public class DefaultTasksManager implements TaskManager, Initializable
     private void loadWiki(String wikiId) throws InitializationException
     {
         try {
-            queue.addAll(this.tasksStore.get().getAllTasks(wikiId)
-                .stream()
-                .map(task -> convert(wikiId, task))
-                .collect(Collectors.toList()));
+            this.queue.addAll(
+                this.tasksStore.get().getAllTasks(wikiId, this.remoteObservationManagerConfiguration.getId())
+                    .stream()
+                    .map(task -> convert(wikiId, task))
+                    .collect(Collectors.toList()));
         } catch (XWikiException e) {
             throw new InitializationException(String.format("Failed to get tasks for wiki [%s]", wikiId), e);
         }
@@ -153,7 +181,7 @@ public class DefaultTasksManager implements TaskManager, Initializable
                     consume();
                 }
             } catch (InitializationException e) {
-                logger.error("Failed to initialize the tasks consumer thread.", e);
+                DefaultTasksManager.this.logger.error("Failed to initialize the tasks consumer thread.", e);
             }
         }
 
@@ -166,18 +194,20 @@ public class DefaultTasksManager implements TaskManager, Initializable
                 if (task.isStop()) {
                     this.halt = true;
                 } else if (!task.isDeprecated()) {
-                    componentManager.get().<TaskConsumer>getInstance(TaskConsumer.class, task.getKind())
+                    DefaultTasksManager.this.componentManager.get()
+                        .<TaskConsumer>getInstance(TaskConsumer.class, task.getKind())
                         .consume(task.getWikiId(), task.getDocName(), task.getVersion(),
                             task.getAuthor());
-                    tasksStore.get().deleteTask(task.getWikiId(), convert(task));
+                    DefaultTasksManager.this.tasksStore.get().deleteTask(task.getWikiId(), convert(task));
                 }
             } catch (Exception e) {
-                logger.warn("Error during the execution of task [{}]. Cause: [{}].", task, getRootCauseMessage(e));
+                DefaultTasksManager.this.logger.warn("Error during the execution of task [{}]. Cause: [{}].", task,
+                    getRootCauseMessage(e));
                 if (task != null) {
                     if (!task.tooManyAttempts()) {
                         // Push back the failed task at the beginning of the queue by resetting its timestamp.
                         task.setTimestamp(System.currentTimeMillis());
-                        queue.put(task);
+                        DefaultTasksManager.this.queue.put(task);
                     } else {
                         logger.error("[{}] abandoned because it has failed to many times.", task);
                     }
@@ -189,7 +219,7 @@ public class DefaultTasksManager implements TaskManager, Initializable
         {
             try {
                 // Load the tasks for all wikis.
-                for (String wikiId : wikiDescriptorManager.getAllIds()) {
+                for (String wikiId : DefaultTasksManager.this.wikiDescriptorManager.getAllIds()) {
                     loadWiki(wikiId);
                 }
             } catch (WikiManagerException e) {
@@ -217,8 +247,10 @@ public class DefaultTasksManager implements TaskManager, Initializable
         id.setDocName(taskData.getDocName());
         id.setKind(taskData.getKind());
         id.setVersion(taskData.getVersion());
+        id.setInstanceId(this.remoteObservationManagerConfiguration.getId());
         xWikiTask.setId(id);
         xWikiTask.setAuthor(taskData.getAuthor());
+        xWikiTask.setTimestamp(new Date(taskData.getTimestamp()));
         return xWikiTask;
     }
 }

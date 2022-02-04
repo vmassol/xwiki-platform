@@ -459,6 +459,7 @@
             <key-property name="versionMajor" column="XWT_VERSION1" type="integer" />
             <key-property name="versionMinor" column="XWT_VERSION2" type="integer" />
             <key-property name="kind" column="XWT_KIND" type="string" length="768" />
+            <key-property name="instanceId" column="XWT_INSTANCE_ID" type="string" length="768" />
         </composite-id>
 
         <!-- The timestamp of creation of the task. Used to prioritize tasks. -->

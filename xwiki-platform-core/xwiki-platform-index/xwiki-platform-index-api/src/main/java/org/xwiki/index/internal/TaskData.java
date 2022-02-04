@@ -39,7 +39,7 @@ public class TaskData implements Serializable
      */
     public static final TaskData STOP = new TaskData(true);
 
-    private long timestamp;
+    private Long timestamp;
 
     private int version1;
 
@@ -68,6 +68,7 @@ public class TaskData implements Serializable
     private TaskData(boolean stop)
     {
         this.stopFlag = stop;
+        this.timestamp = 0L;
     }
 
     /**

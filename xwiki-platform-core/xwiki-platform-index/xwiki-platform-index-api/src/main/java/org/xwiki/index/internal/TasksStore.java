@@ -59,16 +59,20 @@ public class TasksStore extends XWikiHibernateBaseStore
     private DocumentReferenceResolver<String> documentReferenceResolver;
 
     /**
-     * Retrieve the list of all the tasks queued for a given wiki.
+     * Retrieve the list of all the tasks queued for a given wiki for the current instance.
      *
      * @param wikiId the wiki in which to execute the query
+     * @param instanceId the identitfier of the cluster instance in which to execute the task. Each cluster member
+     *     is in charge of consuming its own tasks
      * @return the list of all the task
      * @throws XWikiException in case of error when creating or executing the query
      */
-    public List<XWikiTask> getAllTasks(String wikiId) throws XWikiException
+    public List<XWikiTask> getAllTasks(String wikiId, String instanceId) throws XWikiException
     {
-        return initWikiContext(xWikiContext -> (List<XWikiTask>) executeRead(xWikiContext,
-            session -> session.createQuery("SELECT t FROM XWikiTask t").getResultList()), null, wikiId);
+        return initWikiContext(xWikiContext -> executeRead(xWikiContext,
+            session -> session.createQuery("SELECT t FROM XWikiTask t WHERE t.id.instanceId = :instanceId")
+                .setParameter("instanceId", instanceId)
+                .getResultList()), null, wikiId);
     }
 
     /**
@@ -163,7 +167,7 @@ public class TasksStore extends XWikiHibernateBaseStore
         if (task.getTimestamp() == null) {
             task.setTimestamp(new Date());
         }
-        
+
         // Update allowed in case the same document is queued again with the same version and the same task on restart.
         session.saveOrUpdate(task);
     }
