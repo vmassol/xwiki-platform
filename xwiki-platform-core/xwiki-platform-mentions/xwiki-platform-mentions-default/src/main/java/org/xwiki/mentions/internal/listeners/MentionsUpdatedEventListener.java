@@ -78,6 +78,7 @@ public class MentionsUpdatedEventListener extends AbstractEventListener
             DocumentUpdatedEvent.class.getName(), source, data);
 
         XWikiDocument doc = (XWikiDocument) source;
-        this.taskManager.addTask(doc.getDocumentReference(), doc.getId(), doc.getVersion(), "mention");
+        this.taskManager.addTask(doc.getDocumentReference().getWikiReference().getName(), doc.getId(), doc.getVersion(),
+            "mention");
     }
 }

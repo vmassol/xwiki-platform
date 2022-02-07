@@ -82,6 +82,6 @@ class MentionsUpdatedEventListenerTest
             "Event [org.xwiki.bridge.event.DocumentUpdatedEvent] received from [document] with data [null].",
             this.logCapture.getMessage(0));
 
-        verify(this.taskManager).addTask(documentReference, 42, "1.1", "mention");
+        verify(this.taskManager).addTask("xwiki", 42, "1.1", "mention");
     }
 }

@@ -32,7 +32,6 @@ import javax.inject.Singleton;
 import org.slf4j.Logger;
 import org.suigeneris.jrcs.rcs.Version;
 import org.xwiki.component.annotation.Component;
-import org.xwiki.component.manager.ComponentLifecycleException;
 import org.xwiki.component.manager.ComponentManager;
 import org.xwiki.component.phase.Disposable;
 import org.xwiki.component.phase.Initializable;
@@ -41,7 +40,6 @@ import org.xwiki.index.TaskConsumer;
 import org.xwiki.index.TaskManager;
 import org.xwiki.index.internal.jmx.JMXTasks;
 import org.xwiki.management.JMXBeanRegistration;
-import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.observation.remote.RemoteObservationManagerConfiguration;
 import org.xwiki.wiki.descriptor.WikiDescriptorManager;
 import org.xwiki.wiki.manager.WikiManagerException;
@@ -95,11 +93,10 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     private DocumentRevisionProvider documentRevisionProvider;
 
     @Override
-    public void addTask(DocumentReference documentReference, long docId, String versionStr, String kind)
+    public void addTask(String wikiId, long docId, String versionStr, String kind)
     {
         Version version = new Version(versionStr);
         XWikiTask xWikiTask = initTask(docId, kind, version);
-        String wikiId = documentReference.getWikiReference().getName();
         try {
             this.tasksStore.get().addTask(wikiId, xWikiTask);
         } catch (XWikiException e) {
@@ -113,10 +110,8 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     }
 
     @Override
-    public void replaceTask(DocumentReference documentReference, long docId, String versionStr, String kind)
+    public void replaceTask(String wikiId, long docId, String versionStr, String kind)
     {
-        String wikiId = documentReference.getWikiReference().getName();
-
         Version version = new Version(versionStr);
         XWikiTask xWikiTask = initTask(docId, kind, version);
         try {
@@ -134,7 +129,7 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     }
 
     @Override
-    public void initialize() throws InitializationException
+    public void initialize()
     {
         this.jmxRegistration.registerMBean(new JMXTasks(this::getQueueSize,
                 () -> this.queue.stream().collect(Collectors.groupingBy(TaskData::getKind, Collectors.counting()))),
@@ -143,7 +138,7 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     }
 
     @Override
-    public void dispose() throws ComponentLifecycleException
+    public void dispose()
     {
         this.jmxRegistration.unregisterMBean(MBEAN_NAME);
         this.queue.add(TaskData.STOP);

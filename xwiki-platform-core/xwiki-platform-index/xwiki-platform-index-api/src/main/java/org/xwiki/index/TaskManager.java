@@ -20,7 +20,6 @@
 package org.xwiki.index;
 
 import org.xwiki.component.annotation.Role;
-import org.xwiki.model.reference.DocumentReference;
 import org.xwiki.stability.Unstable;
 
 /**
@@ -36,22 +35,22 @@ public interface TaskManager
     /**
      * Add a task to the queue.
      *
-     * @param documentReference the document reference
+     * @param wikiId the wiki containing the document
      * @param docId the document id
      * @param version the document version
      * @param kind the kind of task to add
      */
-    void addTask(DocumentReference documentReference, long docId, String version, String kind);
+    void addTask(String wikiId, long docId, String version, String kind);
 
     /**
      * Replace all the tasks of the queue with the same document and task kind with the new task.
      *
-     * @param documentReference the document reference
+     * @param wikiId the wiki containing the document
      * @param docId the document id
      * @param version the document version
      * @param kind the kind of task to add
      */
-    void replaceTask(DocumentReference documentReference, long docId, String version, String kind);
+    void replaceTask(String wikiId, long docId, String version, String kind);
 
     /**
      * Starts the consumer thread.
