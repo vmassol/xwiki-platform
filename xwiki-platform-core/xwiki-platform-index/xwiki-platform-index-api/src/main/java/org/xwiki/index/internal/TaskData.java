@@ -20,6 +20,7 @@
 package org.xwiki.index.internal;
 
 import java.io.Serializable;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -39,6 +40,8 @@ public class TaskData implements Serializable
      */
     public static final TaskData STOP = new TaskData(true);
 
+    private static final long serialVersionUID = -1288732853577861921L;
+
     private Long timestamp;
 
     private int version1;
@@ -54,6 +57,8 @@ public class TaskData implements Serializable
     private boolean stopFlag;
 
     private String wikiId;
+
+    private final transient CompletableFuture<TaskData> future = new CompletableFuture<>();
 
     /**
      * Default empty constructor.
@@ -207,10 +212,8 @@ public class TaskData implements Serializable
         TaskData taskData = (TaskData) o;
 
         return new EqualsBuilder()
-            .append(this.timestamp, taskData.timestamp)
             .append(this.version1, taskData.version1)
             .append(this.version2, taskData.version2)
-            .append(this.attempts, taskData.attempts)
             .append(this.stopFlag, taskData.stopFlag)
             .append(this.docId, taskData.docId)
             .append(this.kind, taskData.kind)
@@ -222,12 +225,10 @@ public class TaskData implements Serializable
     public int hashCode()
     {
         return new HashCodeBuilder(17, 37)
-            .append(this.timestamp)
             .append(this.version1)
             .append(this.version2)
             .append(this.docId)
             .append(this.kind)
-            .append(this.attempts)
             .append(this.stopFlag)
             .append(this.wikiId)
             .toHashCode();
@@ -245,5 +246,13 @@ public class TaskData implements Serializable
             .append("wikiId", this.wikiId)
             .append("version", getVersion())
             .toString();
+    }
+
+    /**
+     * @return return a continuation called when the task is finished
+     */
+    public CompletableFuture<TaskData> getFuture()
+    {
+        return this.future;
     }
 }

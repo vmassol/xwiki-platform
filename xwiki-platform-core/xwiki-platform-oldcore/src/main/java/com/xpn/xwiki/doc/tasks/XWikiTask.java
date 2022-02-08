@@ -22,6 +22,8 @@ package com.xpn.xwiki.doc.tasks;
 import java.io.Serializable;
 import java.util.Date;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
 /**
@@ -66,6 +68,28 @@ public class XWikiTask implements Serializable
     public void setTimestamp(Date timestamp)
     {
         this.timestamp = timestamp;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        XWikiTask xWikiTask = (XWikiTask) o;
+        
+        return new EqualsBuilder().append(this.id, xWikiTask.id).isEquals();
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return new HashCodeBuilder(17, 37).append(this.id).toHashCode();
     }
 
     @Override

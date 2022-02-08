@@ -46,11 +46,11 @@ import com.xpn.xwiki.XWikiContext;
 public class TaskApplicationReadyListener extends AbstractEventListener implements Initializable
 {
     @Inject
-    @Named("readonly")
-    private Provider<XWikiContext> contextProvider;
+    private TaskManager taskManager;
 
     @Inject
-    private TaskManager taskManager;
+    @Named("readonly")
+    private Provider<XWikiContext> contextProvider;
 
     /**
      * Default constructor, initialize the listener with its name and the listened event ({@link
@@ -62,6 +62,13 @@ public class TaskApplicationReadyListener extends AbstractEventListener implemen
     }
 
     @Override
+    public void onEvent(Event event, Object source, Object data)
+    {
+        // In case of ApplicationReadyEvent (when the wiki starts)
+        this.taskManager.startThread();
+    }
+
+    @Override
     public void initialize() throws InitializationException
     {
         // If the application is already initialized we start the threads immediately
@@ -69,12 +76,5 @@ public class TaskApplicationReadyListener extends AbstractEventListener implemen
         if (this.contextProvider.get() != null) {
             this.taskManager.startThread();
         }
-    }
-
-    @Override
-    public void onEvent(Event event, Object source, Object data)
-    {
-        // In case of ApplicationReadyEvent (when the wiki starts)
-        this.taskManager.startThread();
     }
 }

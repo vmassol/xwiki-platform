@@ -19,7 +19,10 @@
  */
 package org.xwiki.index;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.xwiki.component.annotation.Role;
+import org.xwiki.index.internal.TaskData;
 import org.xwiki.stability.Unstable;
 
 /**
@@ -39,8 +42,9 @@ public interface TaskManager
      * @param docId the document id
      * @param version the document version
      * @param kind the kind of task to add
+     * @return a completable future for this task
      */
-    void addTask(String wikiId, long docId, String version, String kind);
+    CompletableFuture<TaskData> addTask(String wikiId, long docId, String version, String kind);
 
     /**
      * Replace all the tasks of the queue with the same document and task kind with the new task.
@@ -49,8 +53,9 @@ public interface TaskManager
      * @param docId the document id
      * @param version the document version
      * @param kind the kind of task to add
+     * @return a completable future for this task
      */
-    void replaceTask(String wikiId, long docId, String version, String kind);
+    CompletableFuture<TaskData> replaceTask(String wikiId, long docId, String version, String kind);
 
     /**
      * Starts the consumer thread.

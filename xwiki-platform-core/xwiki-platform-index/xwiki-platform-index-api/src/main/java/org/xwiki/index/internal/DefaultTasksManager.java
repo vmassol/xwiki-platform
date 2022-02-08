@@ -22,7 +22,9 @@ package org.xwiki.index.internal;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.PriorityBlockingQueue;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -93,7 +95,7 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     private DocumentRevisionProvider documentRevisionProvider;
 
     @Override
-    public void addTask(String wikiId, long docId, String versionStr, String kind)
+    public CompletableFuture<TaskData> addTask(String wikiId, long docId, String versionStr, String kind)
     {
         Version version = new Version(versionStr);
         XWikiTask xWikiTask = initTask(docId, kind, version);
@@ -106,11 +108,13 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
                 kind, version, wikiId, getRootCauseMessage(e));
         }
 
-        this.queue.add(convert(wikiId, xWikiTask));
+        TaskData taskData = convert(wikiId, xWikiTask);
+        this.queue.add(taskData);
+        return taskData.getFuture();
     }
 
     @Override
-    public void replaceTask(String wikiId, long docId, String versionStr, String kind)
+    public CompletableFuture<TaskData> replaceTask(String wikiId, long docId, String versionStr, String kind)
     {
         Version version = new Version(versionStr);
         XWikiTask xWikiTask = initTask(docId, kind, version);
@@ -122,10 +126,20 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
                 + "stops. Cause: [{}].", docId, kind, version, wikiId, getRootCauseMessage(e));
         }
 
-        this.queue.removeIf(queuedTask -> Objects.equals(queuedTask.getWikiId(), wikiId)
+        Predicate<TaskData> filter = queuedTask -> Objects.equals(queuedTask.getWikiId(), wikiId)
             && Objects.equals(queuedTask.getKind(), kind)
-            && Objects.equals(queuedTask.getDocId(), docId));
-        this.queue.add(convert(wikiId, xWikiTask));
+            && Objects.equals(queuedTask.getDocId(), docId);
+
+        // Cancel, then remove, the tasks that need to be replaced.
+        this.queue.forEach(taskData -> {
+            if (filter.test(taskData)) {
+                taskData.getFuture().cancel(false);
+            }
+        });
+        this.queue.removeIf(filter);
+        TaskData taskData = convert(wikiId, xWikiTask);
+        this.queue.add(taskData);
+        return taskData.getFuture();
     }
 
     @Override
@@ -163,19 +177,6 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
     public long getQueueSize(String kind)
     {
         return this.queue.stream().filter(taskData -> Objects.equals(taskData.getKind(), kind)).count();
-    }
-
-    private void loadWiki(String wikiId) throws InitializationException
-    {
-        try {
-            this.queue.addAll(
-                this.tasksStore.get().getAllTasks(wikiId, this.remoteObservationManagerConfiguration.getId())
-                    .stream()
-                    .map(task -> convert(wikiId, task))
-                    .collect(Collectors.toList()));
-        } catch (XWikiException e) {
-            throw new InitializationException(String.format("Failed to get tasks for wiki [%s]", wikiId), e);
-        }
     }
 
     private class TasksRunnable implements Runnable
@@ -216,6 +217,7 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
                         DefaultTasksManager.this.componentManager.get()
                             .<TaskConsumer>getInstance(TaskConsumer.class, task.getKind())
                             .consume(doc.getDocumentReference(), doc.getVersion());
+                        task.getFuture().complete(task);
                         DefaultTasksManager.this.tasksStore.get()
                             .deleteTask(task.getWikiId(), task.getDocId(), task.getVersion(), task.getKind());
                     } finally {
@@ -233,6 +235,7 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
                     } else {
                         DefaultTasksManager.this.logger.error("[{}] abandoned because it has failed to many times.",
                             task);
+                        task.getFuture().cancel(false);
                     }
                 }
             }
@@ -247,6 +250,20 @@ public class DefaultTasksManager implements TaskManager, Initializable, Disposab
                 }
             } catch (WikiManagerException e) {
                 throw new InitializationException("Failed to list the wiki IDs.", e);
+            }
+        }
+
+        private void loadWiki(String wikiId) throws InitializationException
+        {
+            try {
+                DefaultTasksManager.this.queue.addAll(
+                    DefaultTasksManager.this.tasksStore.get().getAllTasks(wikiId,
+                            DefaultTasksManager.this.remoteObservationManagerConfiguration.getId())
+                        .stream()
+                        .map(task -> convert(wikiId, task))
+                        .collect(Collectors.toList()));
+            } catch (XWikiException e) {
+                throw new InitializationException(String.format("Failed to get tasks for wiki [%s]", wikiId), e);
             }
         }
     }
