@@ -69,7 +69,7 @@ class MentionsUpdatedEventListenerTest
     {
         DocumentReference documentReference = new DocumentReference("xwiki", "XWiki", "Doc");
         DocumentUpdatedEvent event = new DocumentUpdatedEvent(documentReference);
-        
+
         when(this.document.getDocumentReference()).thenReturn(documentReference);
         when(this.document.getId()).thenReturn(42L);
         when(this.document.getVersion()).thenReturn("1.1");
